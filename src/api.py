@@ -22,8 +22,6 @@ def avg_player_stats_away(player_id, stat_name, pp_line, location, year=2024):
     percentage_above_threshold = (len(above_threshold_games) / len(
         games_locationfilter)) * 100 if len(games_locationfilter) > 0 else 0
 
-    print(
-        f"Percentage of away games where {player_id} scored more than {pp_line} {stat_name}: {percentage_above_threshold:.2f}%")
     return percentage_above_threshold
 
 
@@ -37,8 +35,7 @@ def avg_player_stats_vsteam(player_id, stat_name, pp_line, opponent, year=2024):
         game for game in games_opponentfilter if game[stat_name] > pp_line]
     percentage_above_threshold = (len(above_threshold_games) / len(
         games_opponentfilter)) * 100 if len(games_opponentfilter) > 0 else 0
-    print(
-        f"Percentage of games vs {opponent} where {player_id} scored more than {pp_line} {stat_name}: {percentage_above_threshold:.2f}%")
+
     return percentage_above_threshold
 
 
@@ -57,8 +54,6 @@ def avg_player_stats_pastngames(player_id, stat_name, pp_line, num_games, year=2
     percentage_above_threshold = (
         len(above_threshold_games) / len(game_list)) * 100 if len(game_list) > 0 else 0
 
-    print(
-        f"Percentage of last {num_games} games where {player_id} scored more than {pp_line} {stat_name}: {percentage_above_threshold:.2f}%")
     return percentage_above_threshold
 
 
