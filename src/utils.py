@@ -49,19 +49,8 @@ def get_teams():
 
 
 def get_player_id(player_name):
-    name_parts = player_name.split()
-    last_name_initial = name_parts[-1][0].lower()
-    formatted_name = '-'.join(name_parts).lower()
-
-    search_url = f'https://www.basketball-reference.com/players/{last_name_initial}/'
-    response = requests.get(search_url)
-
-    if response.ok:
-        soup = BeautifulSoup(response.text, 'html.parser')
-
-        for link in soup.select('th[data-stat="player"] a'):
-            if link.text.lower() == player_name.lower():
-                player_id = link['href'].split('/')[3].replace('.html', '')
-                return player_id
-
-    return None
+    parts = player_name.lower().split()
+    last_name = parts[-1]
+    first_name = parts[0]
+    first_two_letters = first_name[:2]
+    return f'{last_name[:5]}{first_two_letters}01'

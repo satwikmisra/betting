@@ -4,6 +4,8 @@ from selenium.webdriver.support import expected_conditions as EC
 import undetected_chromedriver as uc
 import time
 import pandas as pd
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
 
 # Create chrome driver and set random location
 driver = uc.Chrome()
