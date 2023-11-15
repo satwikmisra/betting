@@ -2,6 +2,14 @@ import api
 import utils
 import time
 import pandas as pd
+from datetime import datetime
+from online import scrape_prizepicks
+import gspread
+
+GOOGLE_SHEET_KEY = '1FEBmMm0lmr5U6qoDi_3NS2yMbMAziKNwFewy5_5GSLI'
+WORKSHEET_INDEX = 0
+THRESHOLD = 10
+
 
 def hit_percentage(player_id, stat_name, pp_line, opponent, quiet=True):
     time.sleep(4)
@@ -38,9 +46,13 @@ def hit_percentage(player_id, stat_name, pp_line, opponent, quiet=True):
     return hp
 
 
-# hit_percentage('antetgi01', 'points_scored', 27.5, "NYK", quiet=False)
+output = scrape_prizepicks()
+timestamp = datetime.now().isoformat()
 
-output = pd.read_csv('output.csv')
+client = gspread.oauth()
+sheet = client.open_by_key(GOOGLE_SHEET_KEY)
+worksheet = sheet.get_worksheet(0)
+
 for i, row in output.iterrows():
     stat = row['stat']
     if stat != 'Points':
@@ -48,10 +60,28 @@ for i, row in output.iterrows():
     try:
         player_id = utils.get_player_id(row['name'])
         hp = hit_percentage(
-            player_id, 'points_scored', row['line'], row['opponent'])
-        output.at[i, 'hit_percentage'] = hp
+            player_id, 'points_scored', float(row['line']), row['opponent'])
+        abs_diff = abs(hp - 50)
+        action = 'OVER' if hp > 50 else 'UNDER'
+        if abs_diff < THRESHOLD:
+            action = 'PASS'
+        hp = round(hp, 2)
+        abs_diff = round(abs_diff, 2)
+        worksheet.append_row([
+            timestamp,
+            row['date'],
+            row['time'],
+            row['name'],
+            row['team'],
+            row['position'],
+            row['opponent'],
+            row['stat'],
+            row['line'],
+            hp,
+            abs_diff,
+            action,
+        ])
         print(f'Hit Percentage for {row["name"]}: {hp:.2f}%')
         time.sleep(5)
-        output.to_csv('output.csv', index=False)
-    except:
-        print(f'Gay player {row["name"]}, skipping...')
+    except Exception as e:
+        print(f'Error {e}, skipping...')

@@ -1,7 +1,5 @@
 from basketball_reference_web_scraper import client
 from basketball_reference_web_scraper.data import Location, Outcome, PeriodType, Position, Team
-import datetime
-import requests
 from bs4 import BeautifulSoup
 
 
