@@ -1,4 +1,3 @@
-import requests
 import pandas as pd
 import cloudscraper
 scraper = cloudscraper.create_scraper()

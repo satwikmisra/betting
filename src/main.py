@@ -3,7 +3,7 @@ import utils
 import time
 import pandas as pd
 from datetime import datetime
-from online import scrape_prizepicks
+from prizepicks_selenium import scrape_prizepicks
 import gspread
 
 GOOGLE_SHEET_KEY = '1FEBmMm0lmr5U6qoDi_3NS2yMbMAziKNwFewy5_5GSLI'
@@ -43,6 +43,7 @@ def hit_percentage(player_id, stat_name, pp_line, opponent, quiet=True):
             f"Percentage of games vs {opponent} where {player_id} scored more than {pp_line} {stat_name}: {vs_opp:.2f}%")
         print('-'*20)
         print(f"Total Hit Percentage: {hp:.2f}%")
+    time.sleep(5)
     return hp
 
 
@@ -53,11 +54,25 @@ client = gspread.oauth()
 sheet = client.open_by_key(GOOGLE_SHEET_KEY)
 worksheet = sheet.get_worksheet(0)
 
+# get rows from worksheet
+total_rows = worksheet.row_count
+start_row = max(1, total_rows - 100)
+current_lines = pd.DataFrame(
+    worksheet.get_records(f'A{start_row}:L{total_rows}'))
+already_scraped = set()
+for i, row in current_lines.iterrows():
+    already_scraped.add(
+        str(row['game_date'])+str(row['name'])+str(row['stat'])+str(row['line']))
 for i, row in output.iterrows():
-    stat = row['stat']
-    if stat != 'Points':
-        continue
     try:
+        stat = row['stat']
+        if stat != 'Points':
+            continue
+        pkey = str(row['date'])+str(row['name']) + \
+            str(row['stat'])+str(row['line'])
+        if pkey in already_scraped:
+            print(f'{row["name"]} already scraped, skipping...')
+            continue
         player_id = utils.get_player_id(row['name'])
         hp = hit_percentage(
             player_id, 'points_scored', float(row['line']), row['opponent'])
@@ -82,6 +97,5 @@ for i, row in output.iterrows():
             action,
         ])
         print(f'Hit Percentage for {row["name"]}: {hp:.2f}%')
-        time.sleep(5)
     except Exception as e:
         print(f'Error {e}, skipping...')

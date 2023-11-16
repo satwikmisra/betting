@@ -10,6 +10,7 @@ ssl._create_default_https_context = ssl._create_unverified_context
 
 
 def scrape_prizepicks():
+    print('Starting PrizePicks scrape...')
     # Create chrome driver and set random location
     driver = uc.Chrome()
     driver.execute_cdp_cmd(
@@ -32,6 +33,7 @@ def scrape_prizepicks():
     driver.get("https://app.prizepicks.com/")
     time.sleep(3)
 
+    print('Waiting for PrizePicks to load...')
     # Wait for projections to load
     WebDriverWait(driver, 30).until(
         EC.presence_of_all_elements_located((By.CLASS_NAME, "close")))
@@ -59,7 +61,7 @@ def scrape_prizepicks():
         projections = WebDriverWait(driver, 10).until(
             EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".projection")))
 
-        for p in projections:
+        for pi, p in enumerate(projections):
             name = p.find_element(By.CLASS_NAME, "name").text
             team_pos = p.find_element(
                 By.CLASS_NAME, "team-position").text
@@ -90,6 +92,8 @@ def scrape_prizepicks():
                 'date': game_date,
                 'time': game_time,
             })
-
+            print(f'Scraped projection {pi+1}/{len(projections)}')
+    driver.quit()
+    print('Scraped PrizePicks')
     df = pd.DataFrame(data)
     return df
