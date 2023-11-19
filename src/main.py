@@ -1,58 +1,20 @@
 import api
 import utils
-import time
 import pandas as pd
-from datetime import datetime
+import datetime
 from prizepicks_selenium import scrape_prizepicks
 import gspread
 
 GOOGLE_SHEET_KEY = '1FEBmMm0lmr5U6qoDi_3NS2yMbMAziKNwFewy5_5GSLI'
 WORKSHEET_INDEX = 0
 THRESHOLD = 10
-
-
-def hit_percentage(player_id, stat_name, pp_line, opponent, quiet=True):
-    time.sleep(4)
-    past_5 = api.avg_player_stats_pastngames(player_id, stat_name, pp_line, 5)
-    time.sleep(4)
-    past_10 = api.avg_player_stats_pastngames(
-        player_id, stat_name, pp_line, 10)
-    time.sleep(4)
-    past_15 = api.avg_player_stats_pastngames(
-        player_id, stat_name, pp_line, 15)
-    time.sleep(4)
-    season = api.avg_player_stats_season(player_id, stat_name, pp_line)
-    time.sleep(4)
-    away = api.avg_player_stats_away(player_id, stat_name, pp_line, "AWAY")
-    time.sleep(4)
-    vs_opp = api.avg_player_stats_vsteam(
-        player_id, stat_name, pp_line, opponent)
-    hp = (past_5 + past_10 + past_15 + season + away + vs_opp) / 6.0
-    if not quiet:
-        print(
-            f"Percentage of last 5 games where {player_id} scored more than {pp_line} {stat_name}: {past_5:.2f}%")
-        print(
-            f"Percentage of last 10 games where {player_id} scored more than {pp_line} {stat_name}: {past_10:.2f}%")
-        print(
-            f"Percentage of last 15 games where {player_id} scored more than {pp_line} {stat_name}: {past_15:.2f}%")
-        print(
-            f"Percentage of season where {player_id} scored more than {pp_line} {stat_name}: {season:.2f}%")
-        print(
-            f"Percentage of away games where {player_id} scored more than {pp_line} {stat_name}: {away:.2f}%")
-        print(
-            f"Percentage of games vs {opponent} where {player_id} scored more than {pp_line} {stat_name}: {vs_opp:.2f}%")
-        print('-'*20)
-        print(f"Total Hit Percentage: {hp:.2f}%")
-    time.sleep(5)
-    return hp
-
-
+SCRAPE_STATS = utils.stat_mapping.keys()
 output = scrape_prizepicks()
-timestamp = datetime.now().isoformat()
+timestamp = datetime.datetime.now().isoformat()
 
 client = gspread.oauth()
 sheet = client.open_by_key(GOOGLE_SHEET_KEY)
-worksheet = sheet.get_worksheet(0)
+worksheet = sheet.get_worksheet(WORKSHEET_INDEX)
 
 # get rows from worksheet
 total_rows = worksheet.row_count
@@ -65,17 +27,20 @@ for i, row in current_lines.iterrows():
         str(row['game_date'])+str(row['name'])+str(row['stat'])+str(row['line']))
 for i, row in output.iterrows():
     try:
-        stat = row['stat']
-        if stat != 'Points':
+        if row['stat'] not in SCRAPE_STATS:
             continue
         pkey = str(row['date'])+str(row['name']) + \
             str(row['stat'])+str(row['line'])
         if pkey in already_scraped:
             print(f'{row["name"]} already scraped, skipping...')
             continue
-        player_id = utils.get_player_id(row['name'])
-        hp = hit_percentage(
-            player_id, 'points_scored', float(row['line']), row['opponent'])
+        hp = api.calculate_hit_percentage(
+            player_name=row['name'],
+            stat=row['stat'],
+            pp_line=float(row['line']),
+            opponent=row['opponent'],
+            before_date=datetime.datetime.strptime(row['date'], '%m/%d/%Y')-datetime.timedelta(days=1))
+        hp *= 100
         abs_diff = abs(hp - 50)
         action = 'OVER' if hp > 50 else 'UNDER'
         if abs_diff < THRESHOLD:

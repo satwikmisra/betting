@@ -3,65 +3,59 @@ from basketball_reference_web_scraper.data import Location, Outcome, PeriodType,
 import datetime
 import requests
 from bs4 import BeautifulSoup
-from utils import team_mapping, get_player_id
+from utils import get_player_id, get_stat_name, get_games_by_player
+from nba_api.stats.endpoints import playercareerstats
+import re
 
 
-def avg_player_stats_away(player_id, stat_name, pp_line, location, year=2024):
-    game_list = client.regular_season_player_box_scores(
-        player_identifier=player_id, season_end_year=year)
-
-    if location == "AWAY":
-        games_locationfilter = [
-            game for game in game_list if game['location'] == Location.AWAY]
-    elif location == "HOME":
-        games_locationfilter = [
-            game for game in game_list if game['location'] == Location.HOME]
-
-    above_threshold_games = [
-        game for game in games_locationfilter if game[stat_name] > pp_line]
-    percentage_above_threshold = (len(above_threshold_games) / len(
-        games_locationfilter)) * 100 if len(games_locationfilter) > 0 else 0
-
-    return percentage_above_threshold
+def calculate_hit_percentage(player_name, stat, pp_line, opponent, before_date=None):
+    gamelog = get_games_by_player(player_name, before_date)
+    stat_name = get_stat_name(stat)
+    past_5 = avg_player_stats_pastngames(gamelog, stat_name, pp_line, 5)
+    past_10 = avg_player_stats_pastngames(gamelog, stat_name, pp_line, 10)
+    past_15 = avg_player_stats_pastngames(gamelog, stat_name, pp_line, 15)
+    season = avg_player_stats_season(gamelog, stat_name, pp_line)
+    # away = avg_player_stats_homeaway(gamelog, stat_name, pp_line, location)
+    vs_opp = avg_player_stats_vsteam(gamelog, stat_name, pp_line, opponent)
+    return (past_5 + past_10 + past_15 + season + vs_opp) / 5.0
 
 
-def avg_player_stats_vsteam(player_id, stat_name, pp_line, opponent, year=2024):
-    opponent_enum = team_mapping(opponent)
-    game_list = client.regular_season_player_box_scores(
-        player_identifier=player_id, season_end_year=year)
-    games_opponentfilter = [
-        game for game in game_list if game['opponent'] == opponent_enum]
-    above_threshold_games = [
-        game for game in games_opponentfilter if game[stat_name] > pp_line]
-    percentage_above_threshold = (len(above_threshold_games) / len(
-        games_opponentfilter)) * 100 if len(games_opponentfilter) > 0 else 0
+def avg_player_stats_homeaway(gamelog, stat_name, pp_line, location):
+    if location.lower() == 'home':
+        filtered_log = gamelog[gamelog['MATCHUP'].str.contains('vs.')]
+    elif location.lower() == 'away':
+        filtered_log = gamelog[gamelog['MATCHUP'].str.contains('@')]
+    else:
+        raise ValueError("Location must be 'home' or 'away'")
 
-    return percentage_above_threshold
+    games_over_line = filtered_log[filtered_log[stat_name] > pp_line]
 
+    if len(filtered_log) > 0:
+        percentage_over_line = len(games_over_line) / len(filtered_log)
+    else:
+        percentage_over_line = 0
 
-def avg_player_stats_pastngames(player_id, stat_name, pp_line, num_games, year=2024):
-    game_list = []
-    while len(game_list) < num_games:
-        aux_game_list = client.regular_season_player_box_scores(
-            player_identifier=player_id, season_end_year=year)
-        aux_game_list.reverse()
-        game_list.extend(aux_game_list)
-        year = year - 1
-    game_list = game_list[:num_games]
-
-    above_threshold_games = [
-        game for game in game_list if game[stat_name] > pp_line]
-    percentage_above_threshold = (
-        len(above_threshold_games) / len(game_list)) * 100 if len(game_list) > 0 else 0
-
-    return percentage_above_threshold
+    return percentage_over_line
 
 
-def avg_player_stats_season(player_id, stat_name, pp_line, year=2024):
-    game_list = client.regular_season_player_box_scores(
-        player_identifier=player_id, season_end_year=year)
-    above_threshold_games = [
-        game for game in game_list if game[stat_name] > pp_line]
-    percentage_above_threshold = (
-        len(above_threshold_games) / len(game_list)) * 100 if len(game_list) > 0 else 0
-    return percentage_above_threshold
+def avg_player_stats_vsteam(gamelog, stat_name, pp_line, opponent):
+    pattern = re.compile(r' vs\. | @ ')
+    opponents = [re.split(pattern, mu)[1] ==
+                 opponent for mu in gamelog['MATCHUP']]
+    filtered_log = gamelog[opponents]
+    games_over_line = filtered_log[filtered_log[stat_name] > pp_line]
+    if len(filtered_log) > 0:
+        percentage_over_line = len(games_over_line) / len(filtered_log)
+    else:
+        percentage_over_line = 0
+    return percentage_over_line
+
+
+def avg_player_stats_pastngames(gamelog, stat_name, pp_line, num_games):
+    return (gamelog.head(num_games)[stat_name] >= pp_line).sum()/num_games
+
+
+def avg_player_stats_season(gamelog, stat_name, pp_line):
+    cur_season_id = gamelog['SEASON_ID'].iloc[0]
+    cur_season_gamelog = gamelog[gamelog['SEASON_ID'] == cur_season_id]
+    return (cur_season_gamelog[stat_name] >= pp_line).sum()/len(cur_season_gamelog)
