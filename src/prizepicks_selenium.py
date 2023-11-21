@@ -82,6 +82,8 @@ def scrape_prizepicks():
             date = date.strftime("%m/%d/%Y %H:%M:%S")
             game_date = date.split(" ")[0]
             game_time = date.split(" ")[1]
+            game_date = datetime.strptime(game_date, "%m/%d/%Y")
+            game_date = game_date.strftime("%Y-%m-%d")
             data.append({
                 'name': name,
                 'team': team_pos.split(" - ")[0],

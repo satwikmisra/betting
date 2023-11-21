@@ -7,7 +7,6 @@ import gspread
 
 GOOGLE_SHEET_KEY = '1FEBmMm0lmr5U6qoDi_3NS2yMbMAziKNwFewy5_5GSLI'
 WORKSHEET_INDEX = 0
-THRESHOLD = 10
 SCRAPE_STATS = utils.stat_mapping.keys()
 output = scrape_prizepicks()
 timestamp = datetime.datetime.now().isoformat()
@@ -25,6 +24,8 @@ already_scraped = set()
 for i, row in current_lines.iterrows():
     already_scraped.add(
         str(row['game_date'])+str(row['name'])+str(row['stat'])+str(row['line']))
+
+strategy = api.DiscordStrategy()
 for i, row in output.iterrows():
     try:
         if row['stat'] not in SCRAPE_STATS:
@@ -34,17 +35,15 @@ for i, row in output.iterrows():
         if pkey in already_scraped:
             print(f'{row["name"]} already scraped, skipping...')
             continue
-        hp = api.calculate_hit_percentage(
+        hp = strategy.hit_percentage(
             player_name=row['name'],
             stat=row['stat'],
             pp_line=float(row['line']),
             opponent=row['opponent'],
-            before_date=datetime.datetime.strptime(row['date'], '%m/%d/%Y')-datetime.timedelta(days=1))
+            before_date=datetime.datetime.strptime(row['date'], '%Y-%m-%d')-datetime.timedelta(days=1))
         hp *= 100
         abs_diff = abs(hp - 50)
-        action = 'OVER' if hp > 50 else 'UNDER'
-        if abs_diff < THRESHOLD:
-            action = 'PASS'
+        action = 'OVER' if hp >= 50 else 'UNDER'
         hp = round(hp, 2)
         abs_diff = round(abs_diff, 2)
         worksheet.append_row([
@@ -56,11 +55,11 @@ for i, row in output.iterrows():
             row['position'],
             row['opponent'],
             row['stat'],
-            row['line'],
-            hp,
-            abs_diff,
+            float(row['line']),
+            float(hp),
+            float(abs_diff),
             action,
-        ])
+        ], value_input_option='USER_ENTERED')
         print(f'Hit Percentage for {row["name"]}: {hp:.2f}%')
     except Exception as e:
         print(f'Error {e}, skipping...')

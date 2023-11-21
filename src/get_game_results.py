@@ -22,7 +22,7 @@ def update_game_results():
             date = row['game_date']
             stat = get_stat_name(row['stat'])
             all_games = get_games_by_player(player)
-            date = datetime.strptime(date, '%m/%d/%Y')
+            date = datetime.strptime(date, '%Y-%m-%d')
             # all_games['GAME_DATE'] = pd.to_datetime(
             #     all_games['GAME_DATE'], format='%b %d, %Y')
             game = all_games[all_games['GAME_DATE'] == date]
