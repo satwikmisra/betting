@@ -14,6 +14,7 @@ from nba_api.stats.endpoints import leaguegamefinder
 from nba_api.stats.endpoints import leaguegamelog
 from nba_api.stats.library.parameters import *
 import time
+import gspread
 
 stat_mapping = {
     'Points': 'PTS',
@@ -31,6 +32,25 @@ stat_mapping = {
     'Free Throws Made': 'FTM',
     'Free Throws Attempted': 'FTA',
 }
+
+
+def get_master_sheet(row_limit=None):
+    client = gspread.oauth()
+    sheet = client.open_by_key('1FEBmMm0lmr5U6qoDi_3NS2yMbMAziKNwFewy5_5GSLI')
+    worksheet = sheet.get_worksheet(0)
+    return worksheet
+
+
+def get_metrics_from_cf_matrix(cf_matrix):
+    tp = cf_matrix['pred_OVER']['actual_OVER']
+    tn = cf_matrix['pred_UNDER']['actual_UNDER']
+    fp = cf_matrix['pred_OVER']['actual_UNDER']
+    fn = cf_matrix['pred_UNDER']['actual_OVER']
+    accuracy = (tp+tn)/(tp+tn+fp+fn)
+    precision = tp/(tp+fp)
+    recall = tp/(tp+fn)
+    f1 = 2*precision*recall/(precision+recall)
+    return {'accuracy': accuracy, 'precision': precision, 'recall': recall, 'f1': f1}
 
 
 def get_stat_name(stat):
@@ -88,6 +108,6 @@ def get_games_by_player(player_name, before_date=None):
         games_last_df['GAME_DATE'], format='%b %d, %Y')
     all_games = pd.concat([games_cur_df, games_last_df])
     if before_date is not None:
-        all_games = all_games[all_games['GAME_DATE'] < before_date]
+        all_games = all_games[all_games['GAME_DATE'] <= before_date]
     time.sleep(1)
     return all_games

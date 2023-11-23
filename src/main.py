@@ -1,19 +1,15 @@
-import api
+import models
 import utils
 import pandas as pd
 import datetime
 from prizepicks_selenium import scrape_prizepicks
 import gspread
 
-GOOGLE_SHEET_KEY = '1FEBmMm0lmr5U6qoDi_3NS2yMbMAziKNwFewy5_5GSLI'
-WORKSHEET_INDEX = 0
+
 SCRAPE_STATS = utils.stat_mapping.keys()
 output = scrape_prizepicks()
 timestamp = datetime.datetime.now().isoformat()
-
-client = gspread.oauth()
-sheet = client.open_by_key(GOOGLE_SHEET_KEY)
-worksheet = sheet.get_worksheet(WORKSHEET_INDEX)
+worksheet = utils.get_master_sheet()
 
 # get rows from worksheet
 total_rows = worksheet.row_count
@@ -25,7 +21,7 @@ for i, row in current_lines.iterrows():
     already_scraped.add(
         str(row['game_date'])+str(row['name'])+str(row['stat'])+str(row['line']))
 
-strategy = api.DiscordStrategy()
+strategy = models.DiscordStrategy()
 for i, row in output.iterrows():
     try:
         if row['stat'] not in SCRAPE_STATS:
@@ -40,7 +36,7 @@ for i, row in output.iterrows():
             stat=row['stat'],
             pp_line=float(row['line']),
             opponent=row['opponent'],
-            before_date=datetime.datetime.strptime(row['date'], '%Y-%m-%d')-datetime.timedelta(days=1))
+            game_date=datetime.datetime.strptime(row['date'], '%Y-%m-%d'))
         hp *= 100
         abs_diff = abs(hp - 50)
         action = 'OVER' if hp >= 50 else 'UNDER'
