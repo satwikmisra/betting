@@ -21,7 +21,7 @@ for i, row in current_lines.iterrows():
     already_scraped.add(
         str(row['game_date'])+str(row['name'])+str(row['stat'])+str(row['line']))
 
-strategy = models.DiscordStrategy()
+strategy = models.LogisticRegression('./models/lrmodel.joblib')
 for i, row in output.iterrows():
     try:
         if row['stat'] not in SCRAPE_STATS:
@@ -38,10 +38,7 @@ for i, row in output.iterrows():
             opponent=row['opponent'],
             game_date=datetime.datetime.strptime(row['date'], '%Y-%m-%d'))
         hp *= 100
-        abs_diff = abs(hp - 50)
-        action = 'OVER' if hp >= 50 else 'UNDER'
         hp = round(hp, 2)
-        abs_diff = round(abs_diff, 2)
         worksheet.append_row([
             timestamp,
             row['date'],
@@ -52,9 +49,7 @@ for i, row in output.iterrows():
             row['opponent'],
             row['stat'],
             float(row['line']),
-            float(hp),
-            float(abs_diff),
-            action,
+            float(hp)
         ], value_input_option='USER_ENTERED')
         print(f'Hit Percentage for {row["name"]}: {hp:.2f}%')
     except Exception as e:
