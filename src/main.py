@@ -19,7 +19,7 @@ current_lines = pd.DataFrame(
 already_scraped = set()
 for i, row in current_lines.iterrows():
     already_scraped.add(
-        str(row['game_date'])+str(row['name'])+str(row['stat'])+str(row['line']))
+        str(row['game_date'])+str(row['name'])+str(row['stat']))  # +str(row['line'])) comment this out to add back bumps
 
 strategy = models.LogisticRegression('./models/lrmodel.joblib')
 for i, row in output.iterrows():
