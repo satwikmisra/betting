@@ -234,7 +234,3 @@ class LogisticRegression(BettingStrategy):
                 print(f'Error on row {i}: {e}, skipping...')
                 continue
         return confusion_matrix
-
-
-# strat = LogisticRegression()
-# strat.backtest_strategy(overwrite=True)
