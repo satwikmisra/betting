@@ -11,7 +11,7 @@ output = scrape_prizepicks()
 timestamp = datetime.datetime.now().isoformat()
 worksheet = utils.get_master_sheet()
 
-# get rows from worksheet
+# get rows from worksheetx
 total_rows = worksheet.row_count
 start_row = max(1, total_rows - 100)
 current_lines = pd.DataFrame(
@@ -26,8 +26,7 @@ for i, row in output.iterrows():
     try:
         if row['stat'] not in SCRAPE_STATS:
             continue
-        pkey = str(row['date'])+str(row['name']) + \
-            str(row['stat'])+str(row['line'])
+        pkey = str(row['date'])+str(row['name']) + str(row['stat'])
         if pkey in already_scraped:
             print(f'{row["name"]} already scraped, skipping...')
             continue

@@ -14,6 +14,30 @@ import time
 
 # Predictor functions:
 
+def days_since_last_game(gamelog):
+        try:
+            # Get the player's game log
+            gamelog = utils.get_games_by_player(player_name)
+
+            # Get the date of the last game
+            if not gamelog.empty:
+                last_game_date_str = gamelog.iloc[0]['GAME_DATE']
+                last_game_date = datetime.strptime(last_game_date_str, '%Y-%m-%d')
+
+                # Get the current date
+                current_date = datetime.now()
+
+                # Calculate the difference in days
+                days_diff = (current_date - last_game_date).days
+
+                return days_diff
+            else:
+                return None
+        except Exception as e:
+            print(f"Error calculating days since last game: {e}")
+            return None
+
+
 
 def avg_player_stats_homeaway(gamelog, stat_name, pp_line, location):
     if location.lower() == 'home':
