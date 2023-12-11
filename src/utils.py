@@ -9,7 +9,7 @@ from basketball_reference_web_scraper.data import Location, Outcome, PeriodType,
 from bs4 import BeautifulSoup
 from nba_api.stats.static import players
 from nba_api.stats.static import teams
-from nba_api.stats.endpoints import playergamelog
+from nba_api.stats.endpoints import playergamelog, teamgamelog
 from nba_api.stats.endpoints import leaguegamefinder
 from nba_api.stats.endpoints import leaguegamelog
 from nba_api.stats.library.parameters import *
@@ -87,6 +87,25 @@ def get_team_id(team_name):
 
 def get_team_name(team_id):
     return teams.find_team_name_by_id(team_id)
+
+
+def get_games_by_team(team_name, before_date=None):
+    team_id = get_team_id(team_name)
+    if team_id is None:
+        return f"No team found with the name '{team_name}'"
+    gamelog_cur = teamgamelog.TeamGameLog(team_id=team_id, season="2023-24")
+    gamelog_last = teamgamelog.TeamGameLog(team_id=team_id, season="2022-23")
+    games_cur_df = gamelog_cur.get_data_frames()[0]
+    games_last_df = gamelog_last.get_data_frames()[0]
+    games_cur_df['GAME_DATE'] = pd.to_datetime(
+        games_cur_df['GAME_DATE'], format='%b %d, %Y')
+    games_last_df['GAME_DATE'] = pd.to_datetime(
+        games_last_df['GAME_DATE'], format='%b %d, %Y')
+    all_games = pd.concat([games_cur_df, games_last_df])
+    if before_date is not None:
+        all_games = all_games[all_games['GAME_DATE'] <= before_date]
+    time.sleep(1)
+    return all_games
 
 
 def get_games_by_player(player_name, before_date=None):

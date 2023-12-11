@@ -5,33 +5,6 @@ import pandas as pd
 import time
 
 
-
-
-def days_since_last_game(gamelog):
-    try:
-        # Check if gamelog is not empty
-        if not gamelog.empty:
-            # Get the date of the last game
-            last_game_date = gamelog.iloc[0]['GAME_DATE']
-
-            # Ensure last_game_date is a datetime object (in case it's not)
-            if not isinstance(last_game_date, datetime):
-                last_game_date = pd.to_datetime(last_game_date)
-
-            # Get the current date
-            current_date = datetime.now()
-
-            # Calculate the difference in days
-            days_diff = (current_date - last_game_date).days
-
-            return days_diff
-        else:
-            return None
-    except Exception as e:
-        print(f"Error calculating days since last game: {e}")
-        return None
-
-
 def get_player_id(player_name):
     all_players = players.get_players()
     player = [p for p in all_players if p['full_name'].lower() ==
@@ -40,6 +13,7 @@ def get_player_id(player_name):
         return player[0]['id']
     else:
         raise Exception("Player not found")
+
 
 def get_games_by_player(player_name, before_date=None):
     player_id = get_player_id(player_name)
@@ -63,6 +37,7 @@ def get_games_by_player(player_name, before_date=None):
         all_games = all_games[all_games['GAME_DATE'] <= before_date]
     time.sleep(1)
     return all_games
+
 
 # Example usage
 player_name = "Pascal Siakam"  # Replace with the actual player name
