@@ -21,7 +21,7 @@ for i, row in current_lines.iterrows():
     already_scraped.add(
         str(row['game_date'])+str(row['name'])+str(row['stat']))  # +str(row['line'])) comment this out to add back bumps
 
-strategy = models.LogisticRegression('./models/lrmodel.joblib')
+strategy = models.AdaBoost('/Users/neerjain/Desktop/00Betting/Basketball/betting/models/adaboostmodel.joblib')
 for i, row in output.iterrows():
     try:
         if row['stat'] not in SCRAPE_STATS:
