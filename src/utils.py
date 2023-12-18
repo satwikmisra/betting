@@ -61,6 +61,13 @@ def get_teams():
     return teams.get_teams()
 
 
+def get_player_info(player_name):
+    player_id = get_player_id(player_name)
+    player_info = commonplayerinfo.CommonPlayerInfo(player_id=player_id)
+    player_info_df = player_info.get_data_frames()[0]
+    return player_info_df
+
+
 def get_player_id(player_name):
     all_players = players.get_players()
     player = [p for p in all_players if p['full_name'].lower() ==

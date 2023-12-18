@@ -1,3 +1,4 @@
+import numpy as np
 from basketball_reference_web_scraper import client
 from basketball_reference_web_scraper.data import Location, Outcome, PeriodType, Position, Team
 import datetime
@@ -11,6 +12,8 @@ from abc import ABC, abstractmethod
 from sklearn.linear_model import LogisticRegression
 from joblib import dump, load
 import time
+from nba_api.stats.static import players, teams
+from nba_api.stats.endpoints import playergamelog, leaguegamefinder, teamgamelog
 
 # Predictor functions:
 
@@ -73,6 +76,46 @@ def avg_player_stats_season(gamelog, stat_name, pp_line):
     cur_season_id = gamelog['SEASON_ID'].iloc[0]
     cur_season_gamelog = gamelog[gamelog['SEASON_ID'] == cur_season_id]
     return (cur_season_gamelog[stat_name] >= pp_line).sum()/len(cur_season_gamelog)
+
+
+def get_past_10_game_usage_rates(player_name):
+    # Get player and team IDs
+    team_name = utils.get_player_info(player_name)['TEAM_ABBREVIATION'].iloc[0]
+    player_id = utils.get_player_id(player_name)
+    time.sleep(1)
+
+    team_id = [team['id'] for team in teams.get_teams(
+    ) if team['abbreviation'].lower() == team_name.lower()][0]
+
+    # Fetch player's last 10 games
+    player_log = playergamelog.PlayerGameLog(
+        player_id=player_id, season='2023-24').get_data_frames()[0]
+    last_10_games = player_log.head(10)
+
+    if last_10_games.empty:
+        return f"No recent games found for {player_name}"
+
+    time.sleep(1)
+    usage_rates = []
+
+    for _, game in last_10_games.iterrows():
+        # Fetch team's stats for each game
+        team_log = teamgamelog.TeamGameLog(
+            team_id=team_id, season='2023-24').get_data_frames()[0]
+        team_game_stats = team_log[team_log['Game_ID'] == game['Game_ID']]
+
+        if team_game_stats.empty:
+            continue  # Skip if no team stats found
+
+        player_stats = game
+        team_stats = team_game_stats.iloc[0]
+
+        # Calculate usage rate for each game
+        usg_percent = 100 * ((player_stats['FGA'] + 0.44 * player_stats['FTA'] + player_stats['TOV']) * (
+            240 / 5)) / (player_stats['MIN'] * (team_stats['FGA'] + 0.44 * team_stats['FTA'] + team_stats['TOV']))
+        usage_rates.append(usg_percent)
+
+    return np.mean(usage_rates)
 
 
 class BettingStrategy(ABC):
@@ -262,6 +305,8 @@ class AdaBoost(BettingStrategy):
     def hit_percentage(self, player_name, stat, pp_line, opponent, game_date=None):
         gamelog = utils.get_games_by_player(
             player_name, game_date)
+        thisgame = gamelog[gamelog['GAME_DATE'] == game_date]
+        gamelog = gamelog[gamelog['GAME_DATE'] < game_date]
         stat_name = utils.get_stat_name(stat)
         past_5 = avg_player_stats_pastngames(
             gamelog, stat_name, pp_line, 5)
@@ -272,7 +317,7 @@ class AdaBoost(BettingStrategy):
         season = avg_player_stats_season(gamelog, stat_name, pp_line)
         vs_opp = avg_player_stats_vsteam(
             gamelog, stat_name, pp_line, opponent)
-        if gamelog.iloc[0]['GAME_DATE'] < game_date:
+        if len(thisgame) == 0:
             nextgame = playernextngames.PlayerNextNGames(
                 utils.get_player_id(player_name), 1).get_data_frames()[0]
             if len(nextgame) == 0:
@@ -283,14 +328,10 @@ class AdaBoost(BettingStrategy):
                 away = avg_player_stats_homeaway(
                     gamelog, stat_name, pp_line, location)
         else:
-            thisgame = gamelog[gamelog['GAME_DATE'] == game_date]
-            if len(thisgame) == 0:
-                away = 0.5
-            else:
-                thisgame = thisgame.iloc[0]
-                location = 'away' if '@' in thisgame['MATCHUP'] else 'home'
-                away = avg_player_stats_homeaway(
-                    gamelog, stat_name, pp_line, location)
+            thisgame = thisgame.iloc[0]
+            location = 'away' if '@' in thisgame['MATCHUP'] else 'home'
+            away = avg_player_stats_homeaway(
+                gamelog, stat_name, pp_line, location)
         b2b = days_since_last_game(gamelog, game_date)
         data_str = 'Past 5: {:.2f}%\nPast 10: {:.2f}%\nPast 15: {:.2f}%\nSeason: {:.2f}%\nAway: {:.2f}%\nVs. Opponent: {:.2f}%\nTotal: {:.2f}%'.format(
             past_5*100, past_10*100, past_15*100, season*100, away*100, vs_opp*100, (past_5 + past_10 + past_15 + season + away + vs_opp) / 6.0 * 100)
@@ -341,6 +382,8 @@ class AdaBoost(BettingStrategy):
                 continue
         return confusion_matrix
 
+
 # run these lines to update old hit percentages
 # strategy = AdaBoost('models/adaboostmodel.joblib')
 # strategy.backtest_strategy(overwrite=True)
+print(get_past_10_game_usage_rates('LeBron James'))
