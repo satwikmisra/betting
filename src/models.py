@@ -13,7 +13,7 @@ from sklearn.linear_model import LogisticRegression
 from joblib import dump, load
 import time
 from nba_api.stats.static import players, teams
-from nba_api.stats.endpoints import playergamelog, leaguegamefinder, teamgamelog
+from nba_api.stats.endpoints import playergamelog, leaguegamefinder, teamgamelog, boxscoretraditionalv2
 
 # Predictor functions:
 
@@ -116,6 +116,33 @@ def get_past_10_game_usage_rates(player_name):
         usage_rates.append(usg_percent)
 
     return np.mean(usage_rates)
+
+
+# past 5 games
+#
+def get_opponent_stats(opponent_name, stat_name, num_games=None):
+    opponent_team_id = utils.get_team_id(opponent_name)
+    gamefinder = leaguegamefinder.LeagueGameFinder(
+        team_id_nullable=opponent_team_id, season_nullable='2023-24')
+    time.sleep(5)
+    games = gamefinder.get_data_frames()[0]
+    num_games = num_games or len(games)
+    opp_allowed_stat_list = []
+    for i in range(0, num_games):
+        iter_game_id = games['GAME_ID'].iloc[i]
+        box_score = boxscoretraditionalv2.BoxScoreTraditionalV2(
+            game_id=iter_game_id)
+        time.sleep(5)
+        box_score_data = box_score.team_stats.get_data_frame()
+        if box_score_data['TEAM_ID'].iloc[0] == opponent_team_id:
+            opp_allowed_stat_list.append(box_score_data[stat_name].iloc[1])
+        else:
+            opp_allowed_stat_list.append(box_score_data[stat_name].iloc[0])
+        print(f'Finished game {i+1}/{num_games}')
+    return opp_allowed_stat_list
+
+
+print(get_opponent_stats('Memphis Grizzlies', 'PTS', num_games=5))
 
 
 class BettingStrategy(ABC):
@@ -386,4 +413,3 @@ class AdaBoost(BettingStrategy):
 # run these lines to update old hit percentages
 # strategy = AdaBoost('models/adaboostmodel.joblib')
 # strategy.backtest_strategy(overwrite=True)
-print(get_past_10_game_usage_rates('LeBron James'))
