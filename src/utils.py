@@ -53,8 +53,8 @@ def get_metrics_from_cf_matrix(cf_matrix):
     return {'accuracy': accuracy, 'precision': precision, 'recall': recall, 'f1': f1}
 
 
-def get_stat_name(stat):
-    return stat_mapping[stat]
+def get_stat_name(pp_stat):
+    return stat_mapping[pp_stat]
 
 
 def get_teams():
@@ -85,7 +85,7 @@ def get_player_name(player_id):
 def get_team_id(team_name):
     all_teams = teams.get_teams()
     team = [t for t in all_teams if t['full_name']
-            == team_name or t['nickname'] == team_name]
+            == team_name or t['abbreviation'] == team_name]
     if team:
         return team[0]['id']
     else:

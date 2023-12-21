@@ -3,7 +3,6 @@ import utils
 import pandas as pd
 import datetime
 from prizepicks_selenium import scrape_prizepicks
-import gspread
 
 
 SCRAPE_STATS = utils.stat_mapping.keys()
@@ -21,7 +20,7 @@ for i, row in current_lines.iterrows():
     already_scraped.add(
         str(row['game_date'])+str(row['name'])+str(row['stat']))  # +str(row['line'])) comment this out to add back bumps
 
-strategy = models.AdaBoost('/Users/neerjain/Desktop/00Betting/Basketball/betting/models/adaboostmodel.joblib')
+strategy = models.KNN('./models/knn.joblib')
 for i, row in output.iterrows():
     try:
         if row['stat'] not in SCRAPE_STATS:
@@ -32,7 +31,7 @@ for i, row in output.iterrows():
             continue
         hp = strategy.hit_percentage(
             player_name=row['name'],
-            stat=row['stat'],
+            stat=utils.get_stat_name(row['stat']),
             pp_line=float(row['line']),
             opponent=row['opponent'],
             game_date=datetime.datetime.strptime(row['date'], '%Y-%m-%d'))
