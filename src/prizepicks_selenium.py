@@ -10,10 +10,10 @@ import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 
 
-def scrape_prizepicks():
+def scrape_prizepicks(sport):
     print('Starting PrizePicks scrape...')
     # Create chrome driver and set random location
-    driver = uc.Chrome()
+    driver = uc.Chrome(version_main=120)
     driver.execute_cdp_cmd(
         "Browser.grantPermissions",
         {
@@ -38,16 +38,16 @@ def scrape_prizepicks():
     # Wait for projections to load
     WebDriverWait(driver, 30).until(
         EC.presence_of_all_elements_located((By.CLASS_NAME, "close")))
-    time.sleep(5)
+    time.sleep(2)
 
     # Close the get started popup
     driver.find_element(
         By.XPATH, "/html/body/div[3]/div[3]/div/div/div[3]/button").click()
-    time.sleep(3)
+    time.sleep(2)
 
-    # Find the NBA button and click it
+    # Find the sport button and click it
     driver.find_element(
-        By.XPATH, "//div[@class='name'][normalize-space()='NBA']").click()
+        By.XPATH, f"//div[@class='name'][normalize-space()='{sport}']").click()
     time.sleep(5)
 
     # Waits until stat container element is viewable
@@ -100,3 +100,16 @@ def scrape_prizepicks():
     print('Scraped PrizePicks')
     df = pd.DataFrame(data)
     return df
+
+
+def save_lines_csv(sport):
+    timestamp = datetime.now().isoformat()
+    df = scrape_prizepicks(sport)
+    filename = f'{sport}_prizepicks_{timestamp}.csv'
+    df.to_csv(filename, index=False)
+    print(f'Saved lines to {filename}')
+
+
+if __name__ == '__main__':
+    save_lines_csv('LoL')
+    save_lines_csv('CS2')
