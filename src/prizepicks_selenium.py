@@ -11,8 +11,7 @@ ssl._create_default_https_context = ssl._create_unverified_context
 
 
 def scrape_prizepicks(sport):
-    print('Starting PrizePicks scrape...')
-    # Create chrome driver and set random location
+    # set random location or else prizepicks catches on lol
     driver = uc.Chrome(version_main=120)
     driver.execute_cdp_cmd(
         "Browser.grantPermissions",
@@ -29,35 +28,31 @@ def scrape_prizepicks(sport):
             "accuracy": 100,
         },
     )
-
-    # Open prizepicks
     driver.get("https://app.prizepicks.com/")
     time.sleep(3)
 
-    print('Waiting for PrizePicks to load...')
-    # Wait for projections to load
+    # wait for projections to load
     WebDriverWait(driver, 30).until(
         EC.presence_of_all_elements_located((By.CLASS_NAME, "close")))
     time.sleep(2)
 
-    # Close the get started popup
+    # need to close the get started popup before interacting with other shit
     driver.find_element(
         By.XPATH, "/html/body/div[3]/div[3]/div/div/div[3]/button").click()
     time.sleep(2)
 
-    # Find the sport button and click it
+    # choose sport (needs to be available on the board at the time of running or else will error)
     driver.find_element(
         By.XPATH, f"//div[@class='name'][normalize-space()='{sport}']").click()
     time.sleep(5)
 
-    # Waits until stat container element is viewable
-    stat_container = WebDriverWait(driver, 1).until(
+    WebDriverWait(driver, 1).until(
         EC.visibility_of_element_located((By.CLASS_NAME, "stat-container")))
     categories = driver.find_element(
         By.CSS_SELECTOR, ".stat-container").text.split('\n')
-
     data = []
     for category in categories:
+        # for each stat scrape cards/projections
         driver.find_element(By.XPATH, f"//div[text()='{category}']").click()
         projections = WebDriverWait(driver, 10).until(
             EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".projection")))
@@ -75,6 +70,7 @@ def scrape_prizepicks(sport):
             date = p.find_element(
                 By.CLASS_NAME, "date").get_attribute('innerText')
 
+            # handles games starting in < 1 hour, ask neer if this is implemented correctly
             if 'Start' in date:
                 date = datetime.now()
             else:
@@ -95,11 +91,9 @@ def scrape_prizepicks(sport):
                 'date': game_date,
                 'time': game_time,
             })
-            print(f'Scraped projection {pi+1}/{len(projections)}')
+            print(f'{sport}: Scraped {category} projection {pi+1}/{len(projections)}')
     driver.quit()
-    print('Scraped PrizePicks')
-    df = pd.DataFrame(data)
-    return df
+    return pd.DataFrame(data)
 
 
 def save_lines_csv(sport):
