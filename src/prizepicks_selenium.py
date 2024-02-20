@@ -91,7 +91,7 @@ def scrape_prizepicks(sport):
                 'date': game_date,
                 'time': game_time,
             })
-            print(f'{sport}: Scraped {category} projection {pi+1}/{len(projections)}')
+            print(f'{sport} | {category} ==> scraped {pi+1}/{len(projections)}')
     driver.quit()
     return pd.DataFrame(data)
 
